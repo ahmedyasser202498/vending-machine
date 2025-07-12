@@ -1,0 +1,43 @@
+services:
+  web:
+    build: .
+    volumes:
+      - .:/code
+    ports: ["8000:8000"]
+    command: >
+        sh -c "./wait-for-it.sh db:5432 --
+         python manage.py migrate &&
+         gunicorn backend.wsgi:application --bind 0.0.0.0:8000"
+    depends_on:
+      - db
+    networks:
+      - vending_network
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: vending_db
+      POSTGRES_USER: vending_user
+      POSTGRES_PASSWORD: vending_pass
+    volumes:
+      - /var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    networks:
+      - vending_network
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - web
+    networks:
+      - vending_network
+
+
+networks:
+  vending_network:
+    driver: bridge
